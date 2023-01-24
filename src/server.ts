@@ -115,6 +115,22 @@ app.get("/bar", async (req, res: FooResponse) => {
 
 // there is my self code server book and author
 //get books list
+
+
+/***
+ * get books list "http://localhost:3000/books"
+ * get authors list "http://localhost:3000/authors"
+ * insert book "http://localhost:3000/book"
+ * insert author "http://localhost:3000/author"
+ * delete book "http://localhost:3000/books"
+ * delete author "http://localhost:3000/author"
+ * update book "http://localhost:3000/updatedBook
+ * update author "http://localhost:3000/updatedAuthor"
+ * 
+ * 
+ * 
+ * 
+ */
 app.get("/books",async (req,res:BookResponse)=>{
 let books :Book= await db.all("SELECT * FROM books ");
   res.send(books)
@@ -125,19 +141,28 @@ app.get("/authors",async (req,res:AuthorResponse)=>{
   res.send(authors)
 })
 //get use book id query book info 
-app.get("/book/:id", async (req,res:BookResponse)=>{
-let book :Book= await db.all("SELECT * FROM books WHERE id =  ? ",req.params.id);
+app.get("/book", async (req,res:BookResponse)=>{
+    if (!req.query.id) {
+        return res.status(400).json({ error: "id is required" });
+    }
+let book :Book= await db.all("SELECT * FROM books WHERE id =  ? ",req.query.id);
   res.send(book)
 })
-
-app.get("/author/:id", async (req,res:AuthorResponse)=>{
-let  author:Author= await db.all("SELECT * FROM authors WHERE id =  ? ",req.params.id);
+app.get("/author", async (req,res:AuthorResponse)=>{
+    if (!req.query.id) {
+        return res.status(400).json({ error: "id is required" });
+    }
+let  author:Author= await db.all("SELECT * FROM authors WHERE id =  ? ",req.body.id)
   res.send(author)
 })
 // insert book data 
 app.post("/book",async (req, res:BookResponse )=>{
     const sql ="INSERT INTO books(id, author_id, title, pub_year, genre) VALUES (?,?,?,?,?)";
     const {id,author_id,title,pub_year,genre}=req.body 
+
+    if (!id&&!author_id&&!title&&!pub_year&&!genre) {
+        return res.status(400).json({ error: "body data is required" });
+    }
     let flag :boolean=false
     let flagid:boolean=false
     let books = await db.all("SELECT * FROM books");
@@ -160,11 +185,11 @@ app.post("/book",async (req, res:BookResponse )=>{
         res.send(data)
     }
     if(!flag){
-        res.send({"message":"the author id not exist"})
+        res.status(400).send({"error":"the author id not exist"})
         return 0;
     }
     if (flagid){
-        res.send({"message":"the book id is exist"})
+        res.status(400).send({"error":"the book id is exist"})
     }
 })
 // insert author data
@@ -172,6 +197,9 @@ app.post("/author", async (req,res:AuthorResponse )=>{
     let authors = await db.all("SELECT * FROM authors");
   const sql = "INSERT INTO authors(id, name, bio) VALUES(?,?,?)"
   const {id,name,bio}=req.body
+    if (!id&&!name&&!bio) {
+        return res.status(400).json({ error: "body data is required" });
+    }
     let flag :boolean=false
     for (let i = 0; i < authors.length; i++) {
         if (id==authors[i].id){
@@ -179,7 +207,8 @@ app.post("/author", async (req,res:AuthorResponse )=>{
         }
     }
     if(flag){
-        res.send({"message":"the author id is exist"})
+        
+        res.status(400).send({"error":"the author id is exist"})
     }
     if (!flag){
         db.run(sql,id,name,bio)
@@ -191,6 +220,9 @@ app.post("/updateBook",async (req, res:BookResponse)=>{
     let authors = await db.all("SELECT * FROM authors");
     const sql = "UPDATE books set  author_id = ? , title = ? , pub_year = ? , genre = ? where id = ? "
     const {id,author_id,title,pub_year,genre}=req.body
+    if (!id&&!author_id&&!title&&!pub_year&&!genre) {
+        return res.status(400).json({ error: "body data is required" });
+    }
     let flag :boolean=false
     let flagid:boolean=false
     for (let i = 0; i < authors.length; i++) {
@@ -210,12 +242,13 @@ app.post("/updateBook",async (req, res:BookResponse)=>{
 
     }
     if (!flag){
-        res.send({"message":"the author id not exist"})
+
+        res.status(400).send({"error":"the author id not exist"})
         return 
     }
 
     if (!flagid){
-        res.send({"message":"the book id not exist"})
+        res.status(400).send({"error":"the book id not exist"})
         return
     }
 })
@@ -224,8 +257,11 @@ app.post("/updateAuthor", async (req, res:AuthorResponse )=>{
 
     let books = await db.all("SELECT * FROM books");
     let authors = await db.all("SELECT * FROM authors");
-  const sql = "UPADATE authors set name = ? , set bio = ? where id = ?";
+  const sql = "UPDATE authors set name = ? , bio = ? where id = ?";
   const {id,name,bio}=req.body
+    if (!id&&!name&&!bio) {
+        return res.status(400).json({ error: "body data is required" });
+    }
     let flag :boolean=false
     for (let i = 0; i < authors.length; i++) {
         if (id==authors[i].id){
@@ -235,52 +271,60 @@ app.post("/updateAuthor", async (req, res:AuthorResponse )=>{
     if (flag){
         db.run (sql,name,bio,id)
         res.sendStatus(200)
-        res.send(id)
         return
     }
     else {
-        res.send({"message":"the author id not exist"})
+        res.status(400).send({"error":"the author id not exist"})
         return
     }
 })
 
-app.delete("/book/:id", async (req,res:BookResponse)=>{
+app.delete("/book/", async (req,res:BookResponse)=>{
+    if (!req.query.id) {
+        return res.status(400).json({ error: "delete id is required" });
+    }
     let books = await db.all("SELECT * FROM books");
   const sql = "DELETE FROM books WHERE id = ? "
     let flag:boolean=false
     for (let i = 0; i < books.length; i++) {
-        if (books[i].id==req.params.id){
+        if (books[i].id==req.query.id){
             flag=true
         }
     }
     if (flag){
-        db.run(sql,req.params.id)
+        db.run(sql,req.query.id)
         res.sendStatus(200)
     }
     else {
-        res.send({"message":"the book id not exist"})
+        res.status(400).send({"error":"the book id not exist"})
     }
 })
 
-app.delete("/author/:id", async (req,res:AuthorResponse)=>{
+app.delete("/author", async (req,res:AuthorResponse)=>{
+    if (!req.query.id) {
+        return res.status(400).json({ error: "delete id is required" });
+    }
     let authors = await db.all("SELECT * FROM authors");
     let flag :boolean=false
     for (let i = 0; i < authors.length; i++) {
-        if (req.params.id==authors[i].id){
+        if (req.query.id==authors[i].id){
             flag=true
         }
     }
     if (flag){
         const sql = "DELETE FROM authors WHERE id = ?";
-        db.run(sql,req.params.id)
+        db.run(sql,req.query.id)
         res.sendStatus(200)
     }
     else {
-        res.send({"message":"the delete id not exist"})
+        res.status(400).send({"error":"the delete id not exist"})
     }
 
 })
 
+app.get("*",function(req,res){
+    res.status(404).send({"error":"url not found"})
+})
 
 // run server
 let port = 3000;
